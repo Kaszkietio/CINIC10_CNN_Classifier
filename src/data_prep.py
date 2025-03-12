@@ -12,6 +12,8 @@ CINIC_STD = [0.24205776, 0.23828046, 0.25874835]
 
 def get_dataset(
         path: str,
+        batch_size: int,
+        shuffle: bool,
         use_augmentations: bool,
 ) -> DataLoader:
     augmentations = ([
@@ -22,27 +24,20 @@ def get_dataset(
                                     transforms.Normalize(mean=CINIC_MEAN,std=CINIC_STD)])
 
     ds = torchvision.datasets.ImageFolder(path, transform=transform)
-    return ds
+    loader = DataLoader(ds, batch_size=batch_size, shuffle=shuffle)
+    return loader
 
 
 def get_cinic(
         data_path: str,
-        validation_size: float = 0.2,
         batch_size: int = 256
 ) -> tuple[DataLoader, DataLoader, DataLoader]:
     train_path = os.path.join(data_path, "train")
+    valid_path = os.path.join(data_path, "valid")
     test_path = os.path.join(data_path, "test")
 
-    cinic_train_val = get_dataset(train_path, batch_size)
-    cinic_len = len(cinic_train_val)
-    idxs = np.arange(cinic_len)
-    np.random.shuffle(idxs)
-
-    validation_ds_size = int(cinic_len * validation_size)
-    validation_idxs, train_idxs = np.split(idxs, [validation_ds_size])
-
-    cinic_train = Subset(cinic_train_val, train_idxs)
-    cinic_validation = Subset(cinic_train_val, validation_idxs)
-    cinic_test = get_dataset(test_path, batch_size)
+    cinic_train = get_dataset(train_path, batch_size, True, True)
+    cinic_validation = get_dataset(valid_path, batch_size, True, False)
+    cinic_test = get_dataset(test_path, batch_size, False, False)
 
     return cinic_train, cinic_validation, cinic_test

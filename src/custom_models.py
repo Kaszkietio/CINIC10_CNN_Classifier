@@ -3,7 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 
 class AlexNet_32x32(nn.Module):
-    def __init__(self, num_classes: int = 10, droupout: float = 0.5) -> None:
+    def __init__(self, num_classes: int = 10, dropout: float = 0.5) -> None:
         super().__init__()
         # Convolution
         self.conv1 = nn.Conv2d(3, 64, kernel_size=5, stride=1, padding=1)
@@ -24,13 +24,13 @@ class AlexNet_32x32(nn.Module):
         self.global_avg_pool = nn.AdaptiveAvgPool2d((4, 4))
 
         # Classification
-        self.dropout1 = nn.Dropout(droupout)
+        self.dropout1 = nn.Dropout(dropout)
         self.lin1 = nn.Linear(256 * 4 * 4, 4096)
 
-        self.dropout2 = nn.Dropout(droupout)
+        self.dropout2 = nn.Dropout(dropout)
         self.lin2 = nn.Linear(4096, 4096)
 
-        self.dropout3 = nn.Dropout(droupout)
+        self.dropout3 = nn.Dropout(dropout)
         self.lin3 = nn.Linear(4096, num_classes)
 
 
@@ -80,7 +80,7 @@ class ResidualBlock(nn.Module):
         return out
 
 
-class ResNet(nn.Module):
+class ResNet_32x32(nn.Module):
     def __init__(self, num_classes: int = 10, block: nn.Module = ResidualBlock):
         super().__init__()
         self.conv = nn.Conv2d(3, 64, (3, 3), stride=1, padding=1)

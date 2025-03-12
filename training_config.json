@@ -1,0 +1,12 @@
+{
+    "seed": 1,
+    "model": "alexnet",
+    "model_params": {"num_classes": 2, "dropout": 0.2},
+    "optimizer": "sgd",
+    "optimizer_params": {
+        "lr": 10.0,
+        "momentum": 1.0,
+        "nesterov": true
+    },
+    "epochs": 20
+}
