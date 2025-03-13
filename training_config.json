@@ -1,12 +1,16 @@
 {
     "seed": 1,
-    "model": "alexnet",
-    "model_params": {"num_classes": 2, "dropout": 0.2},
-    "optimizer": "sgd",
+    "model": "ResNet",
+    "model_params": {},
+
+    "optimizer": "AdamW",
     "optimizer_params": {
-        "lr": 10.0,
-        "momentum": 1.0,
-        "nesterov": true
+        "lr": 1e-2,
+        "betas": [0.1, 0.2]
     },
-    "epochs": 20
+
+    "epochs": 20,
+    "batch_size": 512,
+
+    "checkpoint_folder": "checkpoints/test_resnet_512"
 }

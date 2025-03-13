@@ -9,4 +9,4 @@ def set_seed(seed: int):
     torch.manual_seed(seed)
 
 def get_device():
-    return torch.cuda.device(0) if torch.cuda.device_count() > 0 else 'cpu'
+    return "cuda:0" if torch.cuda.device_count() > 0 else 'cpu'

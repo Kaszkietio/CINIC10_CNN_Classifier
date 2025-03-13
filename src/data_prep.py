@@ -24,7 +24,7 @@ def get_dataset(
                                     transforms.Normalize(mean=CINIC_MEAN,std=CINIC_STD)])
 
     ds = torchvision.datasets.ImageFolder(path, transform=transform)
-    loader = DataLoader(ds, batch_size=batch_size, shuffle=shuffle)
+    loader = DataLoader(ds, batch_size=batch_size, shuffle=shuffle, num_workers=3)
     return loader
 
 
