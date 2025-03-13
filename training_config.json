@@ -5,12 +5,16 @@
 
     "optimizer": "AdamW",
     "optimizer_params": {
-        "lr": 1e-2,
-        "betas": [0.1, 0.2]
+        "lr": 1e-3
     },
 
     "epochs": 20,
     "batch_size": 512,
 
-    "checkpoint_folder": "checkpoints/test_resnet_512"
+    "checkpoint_folder": "checkpoints/test_resnet_512",
+    "warmup_epochs": 0,
+
+    "early_stopping": {
+        "patience": 5
+    }
 }

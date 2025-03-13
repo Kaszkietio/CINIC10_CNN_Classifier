@@ -53,16 +53,23 @@ def train(config_path: str, data_path: str):
 
     epochs = int(config["epochs"])
     metrics = {"loss": [float("+inf")], "accuracy": [0.0], "val_loss": [float("+inf")], "val_accuracy": [0.0]}
+    best_model = model
+    warmup_epochs = config["warmup_epochs"]
+
+    best_loss = float('inf')
+    best_loss_epoch = -1
 
     # Training
-    for i in range(epochs):
-        print("Epoch", i)
+    for epoch in range(epochs):
+        print("Epoch", epoch)
 
+        print("Processing training")
         accuracy, loss = train_epoch(model, cinic_train, optimizer, criterion)
         metrics["accuracy"].append(accuracy)
         metrics["loss"].append(loss)
 
-        val_accuracy, val_loss = validation_epoch(model, cinic_valid, criterion)
+        print("Processing validation")
+        val_accuracy, val_loss = no_grad_epoch(model, cinic_valid, criterion)
         metrics["val_accuracy"].append(val_accuracy)
         metrics["val_loss"].append(val_loss)
 
@@ -72,22 +79,38 @@ def train(config_path: str, data_path: str):
         print(f"Validation Accuracy: {metrics['val_accuracy'][-1]:.4f}")
 
         # Saving checkpoint
-        break
+        if epoch >= warmup_epochs and val_loss < metrics["val_loss"][-2]:
+            best_model = model
+            torch.save({
+                    "model_state": model.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                    "loss": criterion.state_dict(),
+                    "epoch": epoch
+            }, os.path.join(checkpoint, "state.pth"))
 
-    torch.save({
-            "model_state": model.state_dict(),
-            "optimizer": optimizer.state_dict(),
-            "loss": criterion.state_dict()
-    }, os.path.join(checkpoint, "state.pth"))
+        # Early stopping
+        if "early_stopping" in config:
+            if val_loss < best_loss:
+                best_loss_epoch = epoch
+                best_loss = val_loss
+            elif epoch - best_loss_epoch >= config["early_stopping"]["patience"]:
+                print("Early stopping!")
+                break
+
+    # Calculate test metrics and confusion matrix
+    test_accuracy, test_loss = no_grad_epoch(best_model, cinic_test, criterion)
+    with open(os.path.join(checkpoint, "test_metrics.txt"), "w") as f:
+        f.write(f"Test Loss: {test_loss:.4f} Test Accuracy: {test_accuracy:.4f}")
+
     df = pd.DataFrame(metrics)
     df.to_csv(os.path.join(checkpoint, "metrics.csv"))
 
 
 def train_epoch(
-        model: nn.Module,
-        train_ds: DataLoader,
-        optimizer: torch.optim.Optimizer,
-        criterion: nn.CrossEntropyLoss
+    model: nn.Module,
+    train_ds: DataLoader,
+    optimizer: torch.optim.Optimizer,
+    criterion: nn.CrossEntropyLoss
 ):
     losses = []
     accuracies = []
@@ -109,17 +132,16 @@ def train_epoch(
 
         losses.append(loss.item())
         batch_sizes.append(len(input))
-        break
 
     accuracy = np.average(accuracies, weights=batch_sizes)
     loss = np.average(losses, weights=batch_sizes)
     return accuracy, loss
 
 
-def validation_epoch(
-        model: nn.Module,
-        valid_ds: DataLoader,
-        criterion: nn.CrossEntropyLoss
+def no_grad_epoch(
+    model: nn.Module,
+    valid_ds: DataLoader,
+    criterion: nn.CrossEntropyLoss
 ):
     val_losses = []
     val_accuracies = []
@@ -139,7 +161,6 @@ def validation_epoch(
             val_losses.append(val_loss.item())
             # Store information regarding
             batch_sizes.append(len(input))
-            break
 
     val_accuracy = np.average(val_accuracies, weights=batch_sizes)
     val_loss = np.average(val_losses, weights=batch_sizes)
