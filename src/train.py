@@ -3,6 +3,7 @@ import argparse
 import json
 import pandas as pd
 import numpy as np
+from sklearn.metrics import ConfusionMatrixDisplay
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -54,10 +55,13 @@ def train(config_path: str, data_path: str):
     epochs = int(config["epochs"])
     metrics = {"loss": [float("+inf")], "accuracy": [0.0], "val_loss": [float("+inf")], "val_accuracy": [0.0]}
     best_model = model
-    warmup_epochs = config["warmup_epochs"]
+    warmup_epochs = int(config["warmup_epochs"])
 
     best_loss = float('inf')
     best_loss_epoch = -1
+
+    classes = cinic_test.dataset.classes
+    classes = sorted(classes, key=lambda x: cinic_test.dataset.class_to_idx[x])
 
     # Training
     for epoch in range(epochs):
@@ -69,7 +73,7 @@ def train(config_path: str, data_path: str):
         metrics["loss"].append(loss)
 
         print("Processing validation")
-        val_accuracy, val_loss = no_grad_epoch(model, cinic_valid, criterion)
+        val_accuracy, val_loss = valid_epoch(model, cinic_valid, criterion)
         metrics["val_accuracy"].append(val_accuracy)
         metrics["val_loss"].append(val_loss)
 
@@ -98,9 +102,23 @@ def train(config_path: str, data_path: str):
                 break
 
     # Calculate test metrics and confusion matrix
-    test_accuracy, test_loss = no_grad_epoch(best_model, cinic_test, criterion)
+    test_accuracy, test_loss, test_targets, test_predictions = test_epoch(best_model,
+                                                                          cinic_test, criterion)
     with open(os.path.join(checkpoint, "test_metrics.txt"), "w") as f:
         f.write(f"Test Loss: {test_loss:.4f} Test Accuracy: {test_accuracy:.4f}")
+
+    # Confusion matrix
+    disp = ConfusionMatrixDisplay.from_predictions(test_targets, test_predictions,
+                                                   display_labels=classes)
+    disp.figure_.savefig(os.path.join(checkpoint, "confusion_matrix_test.jpg"))
+
+    # Confusion matrix without diagonal
+    wrong_predictions_idx = test_targets != test_predictions
+    test_targets = test_targets[wrong_predictions_idx]
+    test_predictions = test_predictions[wrong_predictions_idx]
+    disp = ConfusionMatrixDisplay.from_predictions(test_targets, test_predictions,
+                                                   display_labels=classes)
+    disp.figure_.savefig(os.path.join(checkpoint, "confusion_matrix_test_no_diag.jpg"))
 
     df = pd.DataFrame(metrics)
     df.to_csv(os.path.join(checkpoint, "metrics.csv"))
@@ -138,7 +156,7 @@ def train_epoch(
     return accuracy, loss
 
 
-def no_grad_epoch(
+def valid_epoch(
     model: nn.Module,
     valid_ds: DataLoader,
     criterion: nn.CrossEntropyLoss
@@ -165,6 +183,43 @@ def no_grad_epoch(
     val_accuracy = np.average(val_accuracies, weights=batch_sizes)
     val_loss = np.average(val_losses, weights=batch_sizes)
     return val_accuracy, val_loss
+
+
+def test_epoch(
+    model: nn.Module,
+    valid_ds: DataLoader,
+    criterion: nn.CrossEntropyLoss
+):
+    val_losses = []
+    val_accuracies = []
+    batch_sizes = []
+    predictions = []
+    targets = []
+
+    with torch.no_grad():
+        for input, target in tqdm(valid_ds):
+            input, target = input.cuda(), target.cuda()
+            ohe_target = F.one_hot(target, 10).type(torch.float32)
+            output = model(input)
+            val_loss = criterion(output, ohe_target)
+
+            # Calculate accuracy
+            pred = torch.argmax(output, dim=-1)
+            accurate_pred = (pred == target).type(torch.float32)
+            val_accuracies.append(torch.mean(accurate_pred).item())
+
+            val_losses.append(val_loss.item())
+            # Store information regarding
+            batch_sizes.append(len(input))
+
+            predictions.append(pred)
+            targets.append(target)
+
+    val_accuracy = np.average(val_accuracies, weights=batch_sizes)
+    val_loss = np.average(val_losses, weights=batch_sizes)
+    predictions = torch.concatenate(predictions).cpu().numpy()
+    targets = torch.concatenate(targets).cpu().numpy()
+    return val_accuracy, val_loss, targets, predictions
 
 
 def get_arguments() -> argparse.Namespace:
