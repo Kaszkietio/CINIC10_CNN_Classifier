@@ -10,9 +10,9 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from data_prep import get_cinic
-from utils import set_seed, get_device
-from custom_models import ResNet_32x32, AlexNet_32x32
+from src.data_prep import get_cinic
+from src.utils import set_seed, get_device
+from src.custom_models import ResNet_32x32, AlexNet_32x32
 
 
 MODELS = {
@@ -26,12 +26,7 @@ OPTIMIZERS = {
 }
 
 
-def train(config_path: str, data_path: str):
-    config = None
-    with open(config_path) as f:
-        config_str = f.read()
-        config = json.loads(config_str)
-
+def train(config: dict, data_path: str):
     # Set seed for reproducibility
     seed = int(config["seed"]) if "seed" in config else 0
     set_seed(seed)
@@ -231,4 +226,8 @@ def get_arguments() -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = get_arguments()
-    train(args.config, args.data_path)
+    config = None
+    with open(args.config) as f:
+        config_str = f.read()
+        config = json.loads(config_str)
+    train(config, args.data_path)

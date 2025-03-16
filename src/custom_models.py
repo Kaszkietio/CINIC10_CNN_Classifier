@@ -100,6 +100,7 @@ class ResNet_32x32(nn.Module):
 
         self.lin = nn.Linear(512, num_classes)
 
+
     def _residual_layer(self, block, in_channels, out_channels, blocks_num, stride=1):
         """Creates a residual layer consisting out of residual blocks"""
         downsampler = None
@@ -115,6 +116,7 @@ class ResNet_32x32(nn.Module):
             layers.append(block(out_channels, out_channels, stride))
 
         return nn.Sequential(*layers)
+
 
     def forward(self, x):
         x = self.relu(self.bnorm(self.conv(x)))
