@@ -7,12 +7,14 @@ from sklearn.metrics import ConfusionMatrixDisplay
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+from torch.optim import AdamW, SGD
+from torch.optim.lr_scheduler import ExponentialLR
 import torch.nn.functional as F
 from tqdm import tqdm
 
+from src.custom_models import ResNet_32x32, AlexNet_32x32
 from src.data_prep import get_cinic
 from src.utils import set_seed, get_device
-from src.custom_models import ResNet_32x32, AlexNet_32x32
 
 
 MODELS = {
@@ -21,36 +23,57 @@ MODELS = {
 }
 
 OPTIMIZERS = {
-    "SGD": torch.optim.SGD,
-    "AdamW": torch.optim.AdamW
+    "SGD": SGD,
+    "AdamW": AdamW
+}
+
+SCHEDULERS = {
+    "ExponentialLR": ExponentialLR
 }
 
 
 def train(config: dict, data_path: str):
+    print("Starting training:")
+
     # Set seed for reproducibility
     seed = int(config["seed"]) if "seed" in config else 0
     set_seed(seed)
+    print("Setting seed:", seed)
+
 
     device = get_device()
     print("Device: ", device)
 
     checkpoint = config["checkpoint_folder"]
+    checkpoint = os.path.abspath(checkpoint)
     os.makedirs(checkpoint, exist_ok=True)
+    print("Checkpoint folder:", checkpoint)
 
     with open(os.path.join(checkpoint, "config.json"), "w") as f:
         f.write(json.dumps(config))
 
     batch_size = int(config["batch_size"]) if "batch_size" in config else 256
+    print("Batch size:", batch_size)
     cinic_train, cinic_valid, cinic_test = get_cinic(data_path, batch_size=batch_size)
     model: nn.Module = MODELS[config["model"]](**config["model_params"]).to(device)
+    print("Model:", config["model"])
+    print("Model params:", config["model_params"])
     optimizer: torch.optim.Optimizer = OPTIMIZERS[config["optimizer"]](params=model.parameters(),
                                                 **config["optimizer_params"])
+    print("Optimizer:", optimizer)
+    scheduler = (
+        SCHEDULERS[config["scheduler"]](optimizer, **config["scheduler_params"])
+        if "scheduler" in config else None
+    )
+    print("Scheduler:", scheduler)
     criterion = nn.CrossEntropyLoss()
 
     epochs = int(config["epochs"])
+    print("Number of epochs: ", epochs)
     metrics = {"loss": [float("+inf")], "accuracy": [0.0], "val_loss": [float("+inf")], "val_accuracy": [0.0]}
     best_model = model
     warmup_epochs = int(config["warmup_epochs"])
+    print("Warmup epochs:", warmup_epochs)
 
     best_loss = float('inf')
     best_loss_epoch = -1
@@ -63,11 +86,13 @@ def train(config: dict, data_path: str):
         print("Epoch", epoch)
 
         print("Processing training")
+        model.train()
         accuracy, loss = train_epoch(model, cinic_train, optimizer, criterion)
         metrics["accuracy"].append(accuracy)
         metrics["loss"].append(loss)
 
         print("Processing validation")
+        model.eval()
         val_accuracy, val_loss = valid_epoch(model, cinic_valid, criterion)
         metrics["val_accuracy"].append(val_accuracy)
         metrics["val_loss"].append(val_loss)
@@ -76,6 +101,7 @@ def train(config: dict, data_path: str):
         print(f"Accuracy: {metrics['accuracy'][-1]:.4f}", end=' ')
         print(f"Validation Loss: {metrics['val_loss'][-1]:.4f}", end=' ')
         print(f"Validation Accuracy: {metrics['val_accuracy'][-1]:.4f}")
+        print()
 
         # Saving checkpoint
         if epoch >= warmup_epochs and val_loss < metrics["val_loss"][-2]:
@@ -89,34 +115,21 @@ def train(config: dict, data_path: str):
 
         # Early stopping
         if "early_stopping" in config:
-            if val_loss < best_loss:
+            if config["early_stopping"]["min_delta"] < best_loss - val_loss:
                 best_loss_epoch = epoch
                 best_loss = val_loss
             elif epoch - best_loss_epoch >= config["early_stopping"]["patience"]:
                 print("Early stopping!")
                 break
 
+        # Scheduler step
+        if scheduler is not None:
+            scheduler.step()
+
     # Calculate test metrics and confusion matrix
-    test_accuracy, test_loss, test_targets, test_predictions = test_epoch(best_model,
-                                                                          cinic_test, criterion)
-    with open(os.path.join(checkpoint, "test_metrics.txt"), "w") as f:
-        f.write(f"Test Loss: {test_loss:.4f} Test Accuracy: {test_accuracy:.4f}")
-
-    # Confusion matrix
-    disp = ConfusionMatrixDisplay.from_predictions(test_targets, test_predictions,
-                                                   display_labels=classes)
-    disp.figure_.savefig(os.path.join(checkpoint, "confusion_matrix_test.jpg"))
-
-    # Confusion matrix without diagonal
-    wrong_predictions_idx = test_targets != test_predictions
-    test_targets = test_targets[wrong_predictions_idx]
-    test_predictions = test_predictions[wrong_predictions_idx]
-    disp = ConfusionMatrixDisplay.from_predictions(test_targets, test_predictions,
-                                                   display_labels=classes)
-    disp.figure_.savefig(os.path.join(checkpoint, "confusion_matrix_test_no_diag.jpg"))
-
-    df = pd.DataFrame(metrics)
-    df.to_csv(os.path.join(checkpoint, "metrics.csv"))
+    df_metrics = pd.DataFrame(metrics)
+    df_metrics.to_csv(os.path.join(checkpoint, "metrics.csv"))
+    save_results(checkpoint, best_model, cinic_test, criterion, classes)
 
 
 def train_epoch(
@@ -204,7 +217,6 @@ def test_epoch(
             val_accuracies.append(torch.mean(accurate_pred).item())
 
             val_losses.append(val_loss.item())
-            # Store information regarding
             batch_sizes.append(len(input))
 
             predictions.append(pred)
@@ -215,6 +227,33 @@ def test_epoch(
     predictions = torch.concatenate(predictions).cpu().numpy()
     targets = torch.concatenate(targets).cpu().numpy()
     return val_accuracy, val_loss, targets, predictions
+
+
+def save_results(
+        checkpoint: str,
+        model: nn.Module,
+        cinic_test: DataLoader,
+        criterion: nn.CrossEntropyLoss,
+        classes: list[str]
+):
+    model.eval()
+    test_accuracy, test_loss, test_targets, test_predictions = test_epoch(model,
+                                                                          cinic_test, criterion)
+    with open(os.path.join(checkpoint, "test_metrics.txt"), "w") as f:
+        f.write(f"Test Loss: {test_loss:.4f} Test Accuracy: {test_accuracy:.4f}")
+
+    # Confusion matrix
+    disp = ConfusionMatrixDisplay.from_predictions(test_targets, test_predictions,
+                                                   display_labels=classes)
+    disp.figure_.savefig(os.path.join(checkpoint, "confusion_matrix_test.jpg"))
+
+    # Confusion matrix without diagonal
+    wrong_predictions_idx = test_targets != test_predictions
+    test_targets = test_targets[wrong_predictions_idx]
+    test_predictions = test_predictions[wrong_predictions_idx]
+    disp = ConfusionMatrixDisplay.from_predictions(test_targets, test_predictions,
+                                                   display_labels=classes)
+    disp.figure_.savefig(os.path.join(checkpoint, "confusion_matrix_test_no_diag.jpg"))
 
 
 def get_arguments() -> argparse.Namespace:
