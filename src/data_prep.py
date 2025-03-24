@@ -1,7 +1,5 @@
 import os
-import numpy as np
-import torch
-from torch.utils.data import DataLoader, Dataset, Subset
+from torch.utils.data import DataLoader
 import torchvision
 from torchvision import transforms
 
@@ -24,7 +22,7 @@ def get_dataset(
                                     transforms.Normalize(mean=CINIC_MEAN,std=CINIC_STD)])
 
     ds = torchvision.datasets.ImageFolder(path, transform=transform)
-    loader = DataLoader(ds, batch_size=batch_size, shuffle=shuffle, num_workers=3)
+    loader = DataLoader(ds, batch_size=batch_size, shuffle=shuffle, num_workers=2, pin_memory=True)
     return loader
 
 
@@ -37,7 +35,7 @@ def get_cinic(
     test_path = os.path.join(data_path, "test")
 
     cinic_train = get_dataset(train_path, batch_size, True, True)
-    cinic_validation = get_dataset(valid_path, batch_size, True, False)
+    cinic_validation = get_dataset(valid_path, batch_size, False, False)
     cinic_test = get_dataset(test_path, batch_size, False, False)
 
     return cinic_train, cinic_validation, cinic_test
