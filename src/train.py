@@ -104,7 +104,7 @@ def train(config: dict, data_path: str):
         print()
 
         # Saving checkpoint
-        if epoch >= warmup_epochs and val_loss < metrics["val_loss"][-2]:
+        if epoch >= warmup_epochs and config["early_stopping"]["min_delta"] < best_loss - val_loss:
             best_model = model
             torch.save({
                     "model_state": model.state_dict(),

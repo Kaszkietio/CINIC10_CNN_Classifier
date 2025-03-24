@@ -1,0 +1,1 @@
+{"seed": 42, "model": "ResNet", "model_params": {}, "optimizer": "AdamW", "optimizer_params": {"lr": 0.003, "weight_decay": 0.1}, "epochs": 30, "batch_size": 256, "checkpoint_folder": "/content/checkpoints/ResNet_weight_dec_0_1", "warmup_epochs": 5, "early_stopping": {"patience": 8, "min_delta": 0.001}}
