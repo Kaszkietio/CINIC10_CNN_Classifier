@@ -1,0 +1,3 @@
+Test loss2: 0.6931471228599548
+Test accuracy: 0.5
+Test std_accuracy: 0.0
