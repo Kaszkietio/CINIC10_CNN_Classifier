@@ -1,0 +1,22 @@
+{
+    "seed": 1,
+    "model": "EfficientNet_Transfer_v2",
+    "model_params": {},
+
+    "optimizer": "AdamW",
+    "optimizer_params": {
+        "lr": 1e-3
+    },
+
+    "epochs": 15,
+    "batch_size": 32,
+
+    "checkpoint_folder": "checkpoints/test_augmentations_v5",
+    "warmup_epochs": 0,
+
+    "early_stopping": {
+        "patience": 5
+    }
+}
+
+
