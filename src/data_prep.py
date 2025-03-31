@@ -18,10 +18,7 @@ def get_dataset(
         augmentations_: list = [],
 ) -> DataLoader:
     augmentations = (augmentations_ if use_augmentations else [])
-    transform = transforms.Compose([*augmentations,
-                                    #transforms.ToTensor(),
-                                    #transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-                                    #transforms.Normalize(mean=CINIC_MEAN,std=CINIC_STD)
+    transform = transforms.Compose([*augmentations
                                     ])
 
     ds = torchvision.datasets.ImageFolder(path, transform=transform)
@@ -82,10 +79,14 @@ augmentations_train_EfficientNet = [
     transforms.RandomRotation(20),    
     transforms.ColorJitter(brightness=0.2, contrast=0.2, 
                            saturation=0.2, hue=0.1),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ]
 
 augmentations_val_test_EfficientNet = [
     transforms.Resize(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ]
 
 ### Augmentations exploring
@@ -93,20 +94,28 @@ augmentations_val_test_EfficientNet = [
 # No augmentations
 augmentations_train_aug_1 = [
     transforms.Resize(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ]
 
 augmentations_val_test_aug_1 = [
     transforms.Resize(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ]
 
 augmentations_train_aug_2 = [
     transforms.Resize(224),
     transforms.RandomHorizontalFlip(),
     transforms.RandomRotation(20), 
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ]
 
 augmentations_val_test_aug_2 = [
     transforms.Resize(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ]
 
 augmentations_train_aug_3 = [
@@ -115,10 +124,15 @@ augmentations_train_aug_3 = [
     transforms.RandomRotation(20), 
     transforms.ColorJitter(brightness=0.2, contrast=0.2, 
                            saturation=0.2, hue=0.1),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+
 ]
 
 augmentations_val_test_aug_3 = [
     transforms.Resize(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ]
 
 augmentations_train_aug_4 = [
