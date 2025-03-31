@@ -12,9 +12,9 @@ from torch.optim.lr_scheduler import ExponentialLR
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from src.custom_models import ResNet_32x32, AlexNet_32x32
-from src.data_prep import get_cinic
-from src.utils import set_seed, get_device
+from custom_models import ResNet_32x32, AlexNet_32x32
+from data_prep import get_cinic
+from utils import set_seed, get_device
 
 
 MODELS = {
