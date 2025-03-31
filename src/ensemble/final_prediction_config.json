@@ -1,0 +1,4 @@
+{
+    "batch_size": 32,
+    "checkpoint_folder": "checkpoints/final_classifier"
+}

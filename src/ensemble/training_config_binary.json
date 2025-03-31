@@ -1,0 +1,22 @@
+{
+    "seed": 1,
+    "model": "EfficientNet_Transfer_v2",
+    "model_params": {"num_classes": 2},
+
+    "optimizer": "AdamW",
+    "optimizer_params": {
+        "lr": 1e-3
+    },
+
+    "epochs": 15,
+    "batch_size": 32,
+
+    "checkpoint_folder": "checkpoints/binary_classifier",
+    "warmup_epochs": 0,
+
+    "early_stopping": {
+        "patience": 3
+    }
+}
+
+
