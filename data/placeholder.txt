@@ -1,0 +1,1 @@
+Put here your train, validation and test sets in folders '/train', '/valid', '/test'.

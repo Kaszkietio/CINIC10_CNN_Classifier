@@ -1,0 +1,1 @@
+{"seed": 42, "model": "ResNet", "model_params": {}, "optimizer": "SGD", "optimizer_params": {"lr": 0.1, "momentum": 0.9}, "epochs": 30, "batch_size": 256, "checkpoint_folder": "/content/checkpoints/ResNet_sgd_momentum_0_9", "warmup_epochs": 5, "scheduler": "ExponentialLR", "scheduler_params": {"gamma": 0.9}, "early_stopping": {"patience": 8, "min_delta": 0.001}}
